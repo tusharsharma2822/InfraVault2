@@ -1,0 +1,381 @@
+The main Architecture flow of Season 1 of InfraVault	
+	
+	src/main/java/com/infravault
+	│
+	├── InfraVaultApplication.java
+	│
+	├── auth/
+	│   ├── controller/
+	│   ├── service/
+	│   ├── dto/
+	│   └── security/
+	│
+	├── otp/
+	│   ├── controller/
+	│   ├── service/
+	│   ├── repository/
+	│   ├── model/
+	│   └── dto/
+	│
+	├── user/
+	│   ├── controller/
+	│   ├── service/
+	│   ├── repository/
+	│   ├── model/
+	│   └── dto/
+	│
+	├── project/
+	│   ├── controller/
+	│   ├── service/
+	│   ├── repository/
+	│   ├── model/
+	│   └── dto/
+	│
+	├── document/
+	│   ├── controller/
+	│   ├── service/
+	│   ├── repository/
+	│   ├── model/
+	│   ├── dto/
+	│   └── validation/
+	│
+	├── search/
+	│   ├── controller/
+	│   ├── service/
+	│   ├── dto/
+	│   └── query/
+	│
+	├── preview/
+	│   ├── service/
+	│   ├── converter/
+	│   ├── model/
+	│   └── strategy/
+	│
+	├── dashboard/
+	│   ├── controller/
+	│   ├── service/
+	│   └── dto/
+	│
+	├── audit/
+	│   ├── service/
+	│   ├── repository/
+	│   ├── model/
+	│   └── event/
+	│
+	├── storage/
+	│   ├── StorageService.java
+	│   ├── LocalStorageService.java
+	│   └── StorageProperties.java
+	│
+	├── config/
+	│   ├── SecurityConfig.java
+	│   ├── MongoConfig.java
+	│   └── CorsConfig.java
+	│
+	├── common/
+	│   ├── exception/
+	│   ├── response/
+	│   └── util/
+	│
+	└── security/
+		├── JwtService.java
+		├── JwtAuthenticationFilter.java
+		└── CustomUserDetailsService.java
+		
+		
+---------------------------------------------------------------------------------------------------------------------------------
+
+InfraVault - 1
+
+Document Module
+      ↓
+Document Saved
+      ↓
+DOCUMENT_UPLOADED Event
+      │
+      ├── Preview Module reacts
+      ├── Audit Module reacts
+      └── Future Search Index reacts
+	  
+	  
+InfraVault - 2
+
+Document Module
+      ↓
+Document Saved
+      ↓
+DOCUMENT_UPLOADED Event
+      │
+      ├── Preview Module reacts
+      ├── Audit Module reacts
+      └── Future Search Index reacts
+	  
+---------------------------------------------------------------------------------------------------------------------------------
+
+InfraVault Dependency Direction
+
+                 ┌──────────────┐
+                 │     AUTH     │
+                 └──────┬───────┘
+                        │
+                ┌───────┴───────┐
+                ▼               ▼
+             USER              OTP
+
+
+                 ┌──────────────┐
+                 │   DOCUMENT   │
+                 └──────┬───────┘
+                        │
+          ┌─────────────┼─────────────┐
+          ▼             ▼             ▼
+       PROJECT        STORAGE       USER Boundary
+
+
+DOCUMENT_UPLOADED EVENT
+          │
+          ├────────► PREVIEW
+          │
+          └────────► AUDIT
+
+
+SEARCH
+  │
+  └────────► Document Search Boundary
+
+
+DASHBOARD
+  │
+  ├────────► Document Read Boundary
+  └────────► Project Read Boundary
+  
+
+---------------------------------------------------------------------------------------------------------------------------------
+FINAL ARCHITECTURE PRINCIPLES OF InfraVault
+
+1. Package by Feature
+
+2. Each Module Owns Its Business Logic
+
+3. Avoid Cross-Module Repository Access
+
+4. Communicate Through Defined Boundaries
+
+5. Use Direct Calls for Immediate Answers
+
+6. Use Events for Side Effects
+
+7. Avoid Circular Dependencies
+
+8. Keep Common Package Minimal
+
+9. Storage Behind Abstraction
+
+10. Design for Extraction,
+    Not Premature Microservices chr
+	
+---------------------------------------------------------------------------------------------------------------------------------
+
+Modular Boundaries
+	InfraVault
+		│
+		├── Auth Module
+		├── OTP Module
+		├── User Module
+		├── Project Module
+		├── Document Module
+		├── Search Module
+		├── Preview Module
+		├── Dashboard Module
+		├── Audit Module
+		├── Storage Infrastructure
+		└── Security Infrastructure
+		
+Final Communication Contract Map
+
+					AUTH
+                     │
+              ┌──────┴──────┐
+              ▼             ▼
+            USER           OTP
+
+
+                 DOCUMENT
+                     │
+       ┌─────────────┼─────────────┐
+       ▼             ▼             ▼
+     USER         PROJECT        STORAGE
+
+
+           DOCUMENT_UPLOADED EVENT
+                     │
+              ┌──────┴──────┐
+              ▼             ▼
+           PREVIEW         AUDIT
+
+
+                 SEARCH
+                    │
+                    ▼
+         Document Read/Search Boundary
+
+
+               DASHBOARD
+                    │
+          ┌─────────┴─────────┐
+          ▼                   ▼
+     Document Read        Project Read
+
+
+                 SECURITY
+                    │
+                    ▼
+       Protects External API Boundary
+	   
+---------------------------------------------------------------------------------------------------------------------------------
+
+Complete Request Lifecycle
+
+		1. User clicks button
+				↓
+		2. React handles click
+				↓
+		3. React sends HTTP request
+				↓
+		4. Spring Security intercepts request
+				↓
+		5. JWT validated
+				↓
+		6. Controller receives request
+				↓
+		7. Service executes business logic
+				↓
+		8. Repository queries MongoDB
+				↓
+		9. Data returns to Service
+				↓
+		10. Service creates response
+				↓
+		11. Controller sends HTTP response
+				↓
+		12. React receives JSON
+				↓
+		13. UI renders documents
+		
+---------------------------------------------------------------------------------------------------------------------------------
+
+Part 9 — Final Document Upload Architecture
+
+	User Upload Page will contains	
+		File
+		Title
+		Description
+		Project
+		Category
+		Tags
+		
+	Example
+		File:
+		storage-architecture.pdf
+
+		Title:
+		Enterprise Storage Architecture
+
+		Description:
+		Architecture document for storage environment
+
+		Project:
+		DC Modernization
+
+		Category:
+		Storage
+
+		Tags:
+		Object Storage
+		Block Storage
+		SAN Switch
+		Brocade
+		
+---------------------------------------------------------------------------------------------------------------------------------
+
+Deployment-Level HLD
+	
+	                  USERS
+                        │
+                      HTTPS
+                        │
+                        ▼
+                ┌─────────────────┐
+                │ Reverse Proxy   │
+                │ / Web Entry     │
+                └────────┬────────┘
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+      ┌───────────────┐     ┌────────────────┐
+      │ React Static  │     │ Spring Boot    │
+      │ Frontend      │     │ InfraVault API │
+      └───────────────┘     └───────┬────────┘
+                                    │
+                 ┌──────────────────┼──────────────────┐
+                 ▼                  ▼                  ▼
+            ┌─────────┐       ┌───────────┐      ┌──────────┐
+            │ MongoDB │       │ Document  │      │ Email    │
+            │         │       │ Storage   │      │ Provider │
+            └─────────┘       └───────────┘      └──────────┘
+			
+---------------------------------------------------------------------------------------------------------------------------------
+
+Official Final Architecture of the Episode-1 of the InfraVault - 1
+
+                         USER
+                          │
+                          ▼
+					┌──────────────────┐
+					│ React Frontend   │
+					└────────┬─────────┘
+							 │
+						  HTTPS
+							 │
+							 ▼
+	┌──────────────────────────────────────────────────────┐
+	│            SPRING BOOT MODULAR MONOLITH              │
+	│                                                      │
+	│   ┌────────┐    ┌─────┐   ┌──────┐                    │
+	│   │  Auth  │──▶│ OTP │   │ User │                    │
+	│   └────────┘   └─────┘   └──────┘                    │
+	│                                                      │
+	│   ┌─────────┐      ┌──────────┐                      │
+	│   │ Project │◀─────│ Document │                      │
+	│   └─────────┘      └────┬─────┘                      │
+	│                         │                            │
+	│                  DOCUMENT_UPLOADED                   │
+	│                         │                            │
+	│              ┌──────────┴──────────┐                 │
+	│              ▼                     ▼                 │
+	│         ┌─────────┐           ┌────────┐             │
+	│         │ Preview │           │ Audit  │             │
+	│         └─────────┘           └────────┘             │
+	│                                                      │
+	│   ┌────────┐              ┌───────────┐              │
+	│   │ Search │              │ Dashboard │              │
+	│   └────────┘              └───────────┘              │
+	│                                                      │
+	│   Shared Infrastructure                              │
+	│   ─────────────────────                              │
+	│   Security | Storage Abstraction | Config            │
+	└───────────────┬────────────────┬─────────────────────┘
+					│                │
+					▼                ▼
+			 ┌────────────┐   ┌──────────────┐
+			 │  MongoDB   │   │ File Storage │
+			 │  Metadata  │   │ Originals    │
+			 │            │   │ Previews     │
+			 └────────────┘   └──────────────┘
+					│
+					│ External Integration
+					▼
+			 ┌──────────────┐
+			 │ Email/SMTP   │
+			 │ OTP Delivery │
+			 └──────────────┘

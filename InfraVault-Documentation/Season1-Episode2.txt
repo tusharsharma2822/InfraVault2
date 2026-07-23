@@ -1,0 +1,297 @@
+Data Brain Design of the InfraVault
+
+					MongoDB Basics
+						  ↓
+					Collections
+						  ↓
+					Embedding vs Referencing
+						  ↓
+					User Schema
+						  ↓
+					OTP Challenge Schema
+						  ↓
+					Project Schema
+						  ↓
+					Document Schema
+						  ↓
+					Tags Strategy
+						  ↓
+					Audit Log Schema
+						  ↓
+					Indexes
+						  ↓
+					TTL Index
+						  ↓
+					Search Strategy
+						  ↓
+					Relationships
+						  ↓
+					Final Database Blueprint
+		
+---------------------------------------------------------------------------------------------------------------------------------
+
+Embeddings and References
+
+| Data             | Strategy  | Reason                                |
+| ---------------- | --------- | ------------------------------------- |
+| Tags             | Embed     | Document ke saath naturally belong    |
+| File metadata    | Embed     | Same lifecycle                        |
+| Preview metadata | Embed     | Same document lifecycle               |
+| Project          | Reference | Independent entity                    |
+| Uploader         | Reference | Independent user                      |
+| Audit actor      | Reference | User independently exists             |
+| OTP user         | Reference | Challenge temporary, user independent |
+
+---------------------------------------------------------------------------------------------------------------------------------
+
+Final Relationship Diagram
+
+			┌─────────────────────┐
+			│        USERS        │
+			│                     │
+			│ _id                 │
+			│ email               │
+			│ passwordHash        │
+			│ role                │
+			│ status              │
+			└─────────┬───────────┘
+					  │
+					  │ 1
+					  │
+					  ├──────────────────────┐
+					  │                      │
+					  │ many                 │ many
+					  ▼                      ▼
+			┌─────────────────────┐   ┌──────────────────────┐
+			│   OTP_CHALLENGES    │   │      DOCUMENTS       │
+			│                     │   │                      │
+			│ userId              │   │ uploadedBy           │
+			│ otpHash             │   │ projectId            │
+			│ expiresAt           │   │ tags[]               │
+			│ status              │   │ file{}               │
+			└─────────────────────┘   │ preview{}            │
+									  └──────────┬───────────┘
+												 │
+												 │ many
+												 │
+												 │ 1
+												 ▼
+									  ┌──────────────────────┐
+									  │      PROJECTS        │
+									  │                      │
+									  │ _id                  │
+									  │ projectCode          │
+									  │ name                 │
+									  │ status               │
+									  └──────────────────────┘
+
+
+			┌─────────────────────┐
+			│     AUDIT_LOGS      │
+			│                     │
+			│ actorId ────────────┼────► USERS
+			│ resourceId          │
+			│ action              │
+			│ createdAt           │
+			└─────────────────────┘
+
+
+			┌─────────────────────┐
+			│   REFRESH_TOKENS    │
+			│                     │
+			│ userId ─────────────┼────► USERS
+			│ tokenHash           │
+			│ expiresAt           │
+			│ status              │
+			└─────────────────────┘
+			
+---------------------------------------------------------------------------------------------------------------------------------
+
+Final Collection Blueprint
+
+		infravault
+		│
+		├── users
+		│   ├── _id
+		│   ├── fullName
+		│   ├── email
+		│   ├── passwordHash
+		│   ├── role
+		│   ├── status
+		│   ├── emailVerified
+		│   ├── createdAt
+		│   └── updatedAt
+		│
+		├── otp_challenges
+		│   ├── _id
+		│   ├── userId
+		│   ├── purpose
+		│   ├── otpHash
+		│   ├── status
+		│   ├── attemptCount
+		│   ├── maxAttempts
+		│   ├── resendCount
+		│   ├── expiresAt
+		│   ├── usedAt
+		│   └── createdAt
+		│
+		├── projects
+		│   ├── _id
+		│   ├── projectCode
+		│   ├── name
+		│   ├── description
+		│   ├── status
+		│   ├── createdBy
+		│   ├── createdAt
+		│   └── updatedAt
+		│
+		├── documents
+		│   ├── _id
+		│   ├── title
+		│   ├── description
+		│   ├── category
+		│   ├── tags[]
+		│   ├── projectId
+		│   ├── uploadedBy
+		│   ├── file{}
+		│   │   ├── originalName
+		│   │   ├── storageKey
+		│   │   ├── extension
+		│   │   ├── mimeType
+		│   │   ├── sizeBytes
+		│   │   └── checksum
+		│   ├── preview{}
+		│   │   ├── status
+		│   │   ├── storageKey
+		│   │   ├── mimeType
+		│   │   ├── generatedAt
+		│   │   └── failureReason
+		│   ├── status
+		│   ├── createdAt
+		│   └── updatedAt
+		│
+		├── audit_logs
+		│   ├── _id
+		│   ├── actorId
+		│   ├── action
+		│   ├── resourceType
+		│   ├── resourceId
+		│   ├── metadata{}
+		│   ├── ipAddress
+		│   ├── userAgent
+		│   └── createdAt
+		│
+		└── refresh_tokens
+			├── _id
+			├── userId
+			├── tokenHash
+			├── status
+			├── expiresAt
+			├── createdAt
+			└── revokedAt
+			
+---------------------------------------------------------------------------------------------------------------------------------
+
+Final Index Blueprint
+
+	USERS
+	────────────────────────
+	email UNIQUE
+
+
+	OTP_CHALLENGES
+	────────────────────────
+	expiresAt TTL
+	userId + createdAt
+
+
+	PROJECTS
+	────────────────────────
+	projectCode UNIQUE
+	status
+
+
+	DOCUMENTS
+	────────────────────────
+	projectId
+	uploadedBy
+	tags
+	createdAt DESC
+	projectId + createdAt DESC
+	search index strategy
+
+
+	AUDIT_LOGS
+	────────────────────────
+	actorId + createdAt DESC
+	resourceId + createdAt DESC
+	action + createdAt DESC
+
+
+	REFRESH_TOKENS
+	────────────────────────
+	expiresAt TTL
+	userId
+	tokenHash lookup strategy
+	
+---------------------------------------------------------------------------------------------------------------------------------
+
+Final Architecture Breeze
+
+	1.	Database
+		  ↓
+		MongoDB
+		
+	2.	Core Collections
+			  ↓
+			users
+			otp_challenges
+			projects
+			documents
+			audit_logs
+			refresh_tokens
+			
+	3.	Tags
+		  ↓
+		Embedded Array
+		
+	4.	Project
+		  ↓
+		Referenced by ObjectId
+		
+	5.	Uploader
+		  ↓
+		Derived from authenticated JWT identity
+		
+		Binary Files
+		  ↓
+		NOT stored as normal MongoDB metadata documents
+		  ↓
+		External Storage Layer
+		
+	6.	OTP
+		  ↓
+		Hashed
+		Expiring
+		Attempt Limited
+		TTL Cleaned
+		
+	7.	Search
+		  ↓
+		Metadata + Tags + Index Strategy
+		
+	8.	Preview
+		  ↓
+		Embedded Preview Metadata
+		  ↓
+		Actual Preview Binary in Storage
+		
+	9.	Audit
+		  ↓
+		Append-oriented event history
+		
+	10. Sessions
+		  ↓
+		Hashed Refresh Token Records
+		
+---------------------------------------------------------------------------------------------------------------------------------
